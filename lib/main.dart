@@ -61,6 +61,7 @@ class welcomePage extends StatelessWidget {
                     style: raisedButtonStyle,
                     onPressed: () {
                       gotoLoginPage(context);
+                      // print('Helloworld......');
                     },
                     child: Text('LOGIN'),
                   ))),
@@ -129,15 +130,15 @@ class loginPage extends StatelessWidget {
                   showDialog(
                       context: context,
                       builder: (BuildContext context) => AlertDialog(
-                              title: Text('Alert Dialog'),
-                              content: Text(
-                                  'Invalid username and password try again'),
-                              actions: <Widget>[
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, 'OK'),
-                                  child: const Text('OK'),
-                                ),
-                              ]));
+                          title: Text('Alert Dialog'),
+                          content: Text(
+                              'Invalid username and password try again'),
+                          actions: <Widget>[
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, 'OK'),
+                              child: const Text('OK'),
+                            ),
+                          ]));
                 }
               },
               child: Text('Login'),
@@ -148,11 +149,16 @@ class loginPage extends StatelessWidget {
 }
 
 class SignupPage extends StatelessWidget {
-  final fullname = TextEditingController();
-  final address = TextEditingController();
-  final phonenumber = TextEditingController();
-  final password = TextEditingController();
-  final c_password = TextEditingController();
+  gotoHomePage(BuildContext context) {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (context) => myHomePage()));
+  }
+
+  final fullnameText = TextEditingController();
+  final addressText = TextEditingController();
+  final phonenumberText = TextEditingController();
+  final passwordText = TextEditingController();
+  final c_passwordText = TextEditingController();
   @override
   Widget build(BuildContext build) {
     return Scaffold(
@@ -165,7 +171,7 @@ class SignupPage extends StatelessWidget {
               margin: EdgeInsets.only(
                   left: 50.0, right: 50.0, bottom: 20.0, top: 20.0),
               child: TextField(
-                controller: fullname,
+                controller: fullnameText,
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.person),
                   border: OutlineInputBorder(),
@@ -176,6 +182,7 @@ class SignupPage extends StatelessWidget {
             Container(
                 margin: EdgeInsets.only(left: 50.0, right: 50.0, bottom: 20.0),
                 child: TextField(
+                  controller: addressText,
                   decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.home),
                       border: OutlineInputBorder(),
@@ -184,6 +191,7 @@ class SignupPage extends StatelessWidget {
             Container(
                 margin: EdgeInsets.only(left: 50.0, right: 50.0, bottom: 20.0),
                 child: TextField(
+                  controller: phonenumberText,
                   decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.phone),
                       border: OutlineInputBorder(),
@@ -193,6 +201,7 @@ class SignupPage extends StatelessWidget {
             Container(
                 margin: EdgeInsets.only(left: 50.0, right: 50.0, bottom: 20.0),
                 child: TextField(
+                  controller: passwordText,
                   obscureText: true,
                   decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.password),
@@ -200,9 +209,10 @@ class SignupPage extends StatelessWidget {
                       hintText: 'Enter password'),
                 )),
             Container(
-                // padding: const EdgeInsets.all(20.0),
+              // padding: const EdgeInsets.all(20.0),
                 margin: EdgeInsets.only(left: 50.0, right: 50.0, bottom: 20.0),
                 child: TextField(
+                  controller: c_passwordText,
                   decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.password),
                       border: OutlineInputBorder(),
@@ -211,7 +221,11 @@ class SignupPage extends StatelessWidget {
             TextButton(
                 style: raisedButtonStyle,
                 child: Text("Register"),
-                onPressed: () {})
+                onPressed: () {
+                  initDB(fullnameText.text, addressText.text, passwordText.text,
+                      c_passwordText.text);
+                  gotoHomePage(build);
+                })
           ]),
         ));
   }
@@ -227,3 +241,91 @@ final ButtonStyle raisedButtonStyle = ElevatedButton.styleFrom(
     borderRadius: BorderRadius.all(Radius.circular(10)),
   ),
 );
+
+initDB(String fullname, String address, String number, String password) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final database;
+  database = openDatabase(
+    join(await getDatabasesPath(), 'doggie_database.db'),
+    onCreate: (db, version) {
+      return db.execute(
+        'CREATE TABLE user(fullname TEXT,address TEXT, phonenumber int,password TEXT)',
+      );
+    },
+    version: 1,
+  );
+
+  // Define a function that inserts dogs into the database
+  Future<void> insertDog(Dog dog) async {
+    // Get a reference to the database.
+    final db = await database;
+
+    // Insert the Dog into the correct table. You might also specify the
+    // `conflictAlgorithm` to use in case the same dog is inserted twice.
+    //
+    // In this case, replace any previous data.
+    await db.insert(
+      'user',
+      dog.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // Create a Dog and add it to the dogs table
+  var fido = Dog(
+    fullname: fullname,
+    address: address,
+    phonenumber: number,
+    password: password,
+  );
+
+  await insertDog(fido);
+
+  Future<List<Dog>> dogs() async {
+    // Get a reference to the database.
+    final db = await database;
+
+    // Query the table for all The Dogs.
+    final List<Map<String, dynamic>> maps = await db.query('dogs');
+
+    // Convert the List<Map<String, dynamic> into a List<Dog>.
+    return List.generate(maps.length, (i) {
+      return Dog(
+          fullname: maps[i]['fullname'],
+          address: maps[i]['address'],
+          phonenumber: maps[i]['phonenumber'],
+          password: maps[i]['password']);
+    });
+  }
+
+  // Now, use the method above to retrieve all the dogs.
+  print(await dogs()); // Prints a list that include Fido.
+}
+
+class Dog {
+  final String fullname;
+  final String address;
+  final String phonenumber;
+  final String password;
+
+  const Dog({
+    required this.fullname,
+    required this.address,
+    required this.phonenumber,
+    required this.password,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'fullname': fullname,
+      'address': address,
+      'phonenumber': phonenumber,
+      'password': password,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'Dog{id: $fullname, name: $address, age: $phonenumber,password : $password}';
+  }
+}
