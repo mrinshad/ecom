@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 void main(List<String> args) {
   runApp(MyApp());
@@ -124,22 +125,7 @@ class loginPage extends StatelessWidget {
               onPressed: () {
                 String username = usernameTextField.text;
                 String password = passwordTextField.text;
-                if (username == 'admin' && password == '123') {
-                  gotoHomePage(context);
-                } else {
-                  showDialog(
-                      context: context,
-                      builder: (BuildContext context) => AlertDialog(
-                          title: Text('Alert Dialog'),
-                          content: Text(
-                              'Invalid username and password try again'),
-                          actions: <Widget>[
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, 'OK'),
-                              child: const Text('OK'),
-                            ),
-                          ]));
-                }
+                _query(username,password,context);
               },
               child: Text('Login'),
             ),
@@ -222,9 +208,19 @@ class SignupPage extends StatelessWidget {
                 style: raisedButtonStyle,
                 child: Text("Register"),
                 onPressed: () {
+                  gotoWelcomePage(BuildContext context) {
+                    Navigator.push(
+                        context, MaterialPageRoute(builder: (context) => welcomePage()));
+                  }
+                  if(passwordText.text == c_passwordText.text){
                   initDB(fullnameText.text, addressText.text, passwordText.text,
                       c_passwordText.text);
-                  gotoHomePage(build);
+                  // gotoWelcomePage(build);
+                  Navigator.pop(build);
+                  Fluttertoast.showToast(msg: "Account created");
+                  }else{
+                    Fluttertoast.showToast(msg: "Passwords dont match");
+                  }
                 })
           ]),
         ));
@@ -244,8 +240,7 @@ final ButtonStyle raisedButtonStyle = ElevatedButton.styleFrom(
 
 initDB(String fullname, String address, String number, String password) async {
   WidgetsFlutterBinding.ensureInitialized();
-  final database;
-  database = openDatabase(
+  final database = openDatabase(
     join(await getDatabasesPath(), 'doggie_database.db'),
     onCreate: (db, version) {
       return db.execute(
@@ -281,25 +276,26 @@ initDB(String fullname, String address, String number, String password) async {
 
   await insertDog(fido);
 
-  Future<List<Dog>> dogs() async {
-    // Get a reference to the database.
-    final db = await database;
 
-    // Query the table for all The Dogs.
-    final List<Map<String, dynamic>> maps = await db.query('dogs');
+}
 
-    // Convert the List<Map<String, dynamic> into a List<Dog>.
-    return List.generate(maps.length, (i) {
-      return Dog(
-          fullname: maps[i]['fullname'],
-          address: maps[i]['address'],
-          phonenumber: maps[i]['phonenumber'],
-          password: maps[i]['password']);
-    });
+
+
+_query(String username,String password,BuildContext context) async {
+  gotoHomePage(BuildContext context) {
+    Navigator.push(
+        context, MaterialPageRoute(builder: (context) => myHomePage()));
   }
+  // get a reference to the database
+  final database = openDatabase(join(await getDatabasesPath(), 'doggie_database.db'));
+  Database db = await database;
 
-  // Now, use the method above to retrieve all the dogs.
-  print(await dogs()); // Prints a list that include Fido.
+  // raw query
+  List<Map> result = await db.rawQuery('SELECT * FROM user WHERE fullname=? AND password =?', [username,password]);
+
+  // print the results
+  result.isNotEmpty ? result.forEach((row) =>gotoHomePage(context) ) : Fluttertoast.showToast(msg: "Invalid username and password");
+  // {_id: 2, name: Mary, age: 32}
 }
 
 class Dog {
