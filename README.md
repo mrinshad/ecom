@@ -1,4 +1,4 @@
-# first_app
+# Acosmoz Android
 
 A new Flutter project.
 
